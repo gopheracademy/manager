@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<head>
+	<meta charset='UTF-8' />
+	<title>otohttp Example</title>
+</head>
+<body>
+	<script src='greeter.gen.js'></script>
+	<script>
+
+		const greeterService = new GreeterService()
+		greeterService.greet({
+			Name: "world",
+		})
+			.then(response => {
+				document.write(response.greeting)
+			})
+			.catch(e => alert(e))
+
+	</script>
+</body>
