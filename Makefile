@@ -1,12 +1,12 @@
 PKG = github.com/gopheracademy/manager
-CMD = alltag
-PREFIX = /usr
+CMD = manager
 
-all: build/$(CMD)
+all: $(CMD)
 
 ################################################################################
 # building/bundling CSS/JS artifacts
-
+# BRIAN: These targets don't work - they're from an example on the internet
+#
 hash-fonts: FORCE
 	bash ./src/hash-artifacts.sh build/fonts-by-hash src/*.otf
 build/fonts-by-hash/fonts.scss: hash-fonts
@@ -21,8 +21,10 @@ build/bindata/bindata.go: hashed-artifacts
 	@mkdir -p build/bindata
 	go-bindata -modtime 1 -pkg bindata -prefix build/by-hash/ -o $@ build/by-hash/*
 
-admin: FORCE
-	@cd admin && npm run build
+
+# build the website
+www: FORCE
+	@cd www && npm run build
 
 ################################################################################
 # compiling and installing the binary
@@ -34,24 +36,23 @@ GO            = GOPATH=$(CURDIR)/.gopath GOBIN=$(CURDIR)/build go
 GO_BUILDFLAGS =
 GO_LDFLAGS    = -s -w
 
-build/$(CMD): build/bindata/bindata.go
+$(CMD): www
 	$(GO) install $(GO_BUILDFLAGS) -ldflags '$(GO_LDFLAGS)' '$(PKG)'
 
-install: FORCE all
-	install -D -m 0755 "build/$(CMD)" "$(DESTDIR)$(PREFIX)/bin/$(CMD)"
 
 ################################################################################
 # utilities
 
 # convenience target for developers: `make run` runs the application with
 # environment options sourced from $PWD/.env
-run: build/$(CMD)
-	set -euo pipefail && source ./.env && ./build/$(CMD) $*
+run:$(CMD)
+	set -euo pipefail && source ./.env && .$(CMD) $*
 
 vendor: FORCE
 	$(GO) mod tidy
 	$(GO) mod vendor
 
+# generate all the service files from the oto definitions in the def directory
 generate: FORCE
 	$(GO) generate
 .PHONY: FORCE
