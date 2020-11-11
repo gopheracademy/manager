@@ -1,1 +1,6 @@
-backend/backend
+.gopath
+manager
+www/public/build
+.env
+.envrc
+

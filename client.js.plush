@@ -3,7 +3,7 @@
 'use strict';
 
 <%= for (service) in def.Services { %> 
-export default class <%= service.Name %> {
+export class <%= service.Name %> {
 	<%= for (method) in service.Methods { %>
 	async <%= camelize_down(method.Name) %>(<%= camelize_down(method.InputObject.TypeName) %>) {
 		const headers = {
@@ -22,12 +22,7 @@ export default class <%= service.Name %> {
 				throw new Error(json.error)
 			}
 			return json
-		} , reason => {
-			console.error(reason); // Error!
-		}
-		)  .catch(error => {
-			console.error('onRejected function called: ' + error.message);
-      })
+		})
 	}
 	<% } %>
 }

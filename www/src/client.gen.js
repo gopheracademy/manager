@@ -2,17 +2,17 @@
 
 'use strict';
 
-
-export default class ConferenceService {
-
+ 
+export class ConferenceService {
+	
 	async get(getConferenceRequest) {
 		const headers = {
-			'Accept': 'application/json',
-			'Accept-Encoding': 'gzip',
-			'Content-Type': 'application/json',
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
 		}
 		getConferenceRequest = getConferenceRequest || {}
-		const response = await window.fetch('/oto/ConferenceService.Get', {
+		const response = await fetch('/oto/ConferenceService.Get', {
 			method: 'POST',
 			headers: headers,
 			body: JSON.stringify(getConferenceRequest)
@@ -22,19 +22,14 @@ export default class ConferenceService {
 				throw new Error(json.error)
 			}
 			return json
-		}, reason => {
-			console.error(reason); // Error!
-		}
-		).catch(error => {
-			console.error('onRejected function called: ' + error.message);
 		})
 	}
-
+	
 	async list(listConferenceRequest) {
 		const headers = {
-			'Accept': 'application/json',
-			'Accept-Encoding': 'gzip',
-			'Content-Type': 'application/json',
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
 		}
 		listConferenceRequest = listConferenceRequest || {}
 		const response = await fetch('/oto/ConferenceService.List', {
@@ -47,13 +42,8 @@ export default class ConferenceService {
 				throw new Error(json.error)
 			}
 			return json
-		}, reason => {
-			console.error(reason); // Error!
-		}
-		).catch(error => {
-			console.error('onRejected function called: ' + error.message);
 		})
 	}
-
+	
 }
 
