@@ -2,15 +2,39 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path/filepath
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pacedotdev/oto/otohttp"
+	"github.com/uber/jaeger-client-go"
+	"github.com/uber/jaeger-client-go/config"
 )
+
+// initJaeger returns an instance of Jaeger Tracer that samples 100% of traces and logs all spans to stdout.
+func initJaeger(service string) (opentracing.Tracer, io.Closer) {
+	cfg := &config.Configuration{
+		ServiceName: service,
+		Sampler: &config.SamplerConfig{
+			Type:  "const",
+			Param: 1,
+		},
+		Reporter: &config.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+	tracer, closer, err := cfg.NewTracer(config.Logger(jaeger.StdLogger))
+	if err != nil {
+		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
+	}
+	return tracer, closer
+}
 
 // spaHandler implements the http.Handler interface, so we can use it
 // to respond to HTTP requests. The path to the static directory and
@@ -56,17 +80,24 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	tracer, closer := initJaeger("manager")
+	defer closer.Close()
 	router := mux.NewRouter()
 
 	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+
+		span := tracer.StartSpan("health")
+		defer span.Finish()
 		// an example API handler
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	})
 	var conferenceService conferenceService
+	conferenceService.tracer = tracer
+
 	server := otohttp.NewServer()
-	RegisterConferenceService(server, conferenceService)
-	router.Handle("/oto/", server)
-	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
+	RegisterConferenceService(tracer, server, conferenceService)
+	router.PathPrefix("/oto/").Handler(server)
+	spa := spaHandler{staticPath: "./www/public", indexPath: "index.html"}
 	router.PathPrefix("/").Handler(spa)
 
 	srv := &http.Server{
