@@ -7,6 +7,7 @@ type Conference struct {
 	ID     uint
 	Name   string
 	Events []Event
+	Slots  []ConferenceSlot
 }
 
 // Event is an instance like GopherCon 2020
