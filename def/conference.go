@@ -7,7 +7,6 @@ type Conference struct {
 	ID     uint
 	Name   string
 	Events []Event
-	Slots  []ConferenceSlot
 }
 
 // Event is an instance like GopherCon 2020
@@ -18,4 +17,5 @@ type Event struct {
 	StartDate time.Time
 	EndDate   time.Time
 	Location  string
+	Slots     []EventSlot
 }

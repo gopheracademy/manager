@@ -6,9 +6,9 @@ import (
 	"github.com/shopspring/decimal" //this is an arbitrary pick
 )
 
-// ConferenceSlot holds information for any sellable/giftable slot we have in the conference for
-// a Talk.
-type ConferenceSlot struct {
+// EventSlot holds information for any sellable/giftable slot we have in the event for
+// a Talk or any other activity that requires admission.
+type EventSlot struct {
 	ID          uint
 	Name        string
 	Description string
@@ -18,7 +18,16 @@ type ConferenceSlot struct {
 	EndDate     time.Time
 	// DependsOn means that these two Slots need to be acquired together, user must either buy
 	// both Slots or pre-own one of the one it depends on.
-	DependsOn *ConferenceSlot
+	DependsOn *EventSlot
+	// PurchaseableFrom indicates when this item is on sale, for instance early bird tickets are the first
+	// ones to go on sale.
+	PurchaseableFrom time.Time
+	// PuchaseableUntil indicates when this item stops being on sale, for instance early bird tickets can
+	// no loger be purchased N months before event.
+	PurchaseableUntil time.Time
+	// AvailableToPublic indicates is this is something that will appear on the tickets purchase page (ie, we can
+	// issue sponsor tickets and those cannot be bought individually)
+	AvailableToPublic bool
 }
 
 // ClaimPayment represents a payment for N claims
@@ -34,7 +43,7 @@ type ClaimPayment struct {
 func (c *ClaimPayment) TotalDue() decimal.Decimal {
 	totalDue := decimal.Zero
 	for _, sc := range c.ClaimsPayed {
-		totalDue = totalDue.Add(sc.ConferenceSlot.Cost)
+		totalDue = totalDue.Add(sc.EventSlot.Cost)
 	}
 	return totalDue
 }
@@ -49,8 +58,8 @@ func (c *ClaimPayment) Fulfilled() bool {
 
 // SlotClaim represents one occupancy of one slot.
 type SlotClaim struct {
-	ID             string // uuid
-	ConferenceSlot *ConferenceSlot
+	ID        string // uuid
+	EventSlot *EventSlot
 	// TicketID should only be valid when combined with the correct Attendee ID/Email
 	TicketID string // uuid
 	// Redeemed represents whether this has been used (ie the Attendee enrolled in front desk
