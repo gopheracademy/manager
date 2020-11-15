@@ -24,7 +24,7 @@ build/bindata/bindata.go: hashed-artifacts
 
 # build the website
 www: FORCE
-	@cd www && npm run build
+	@cd www && npm install && npm run build
 
 ################################################################################
 # compiling and installing the binary
