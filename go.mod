@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/gorilla/mux v1.8.0
+	github.com/pacedotdev/oto v0.10.7 // indirect
 	github.com/pacedotdev/oto/otohttp v0.8.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/shopspring/decimal v1.2.0

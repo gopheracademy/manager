@@ -66,10 +66,20 @@ func (s *conferenceServiceServer) handleList(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// Conference is an event
-type Conference struct {
-	gorm.Model
+// Event is an instance like GopherCon 2020
+type Event struct {
+	ID   uint   `json:"id"`
 	Name string `json:"name"`
+	Slug string `json:"slug"`
+	// StartDate time.Time EndDate time.Time
+	Location string `json:"location"`
+}
+
+// Conference is a brand like GopherCon
+type Conference struct {
+	ID     uint    `json:"id"`
+	Name   string  `json:"name"`
+	Events []Event `json:"events"`
 }
 
 // GetConferenceRequest is the request object for ConferenceService.Get.
