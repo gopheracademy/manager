@@ -4,10 +4,11 @@ package main
 
 import (
 	"context"
-	"net/http"
-
+	"github.com/gopheracademy/manager/pkg/log"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pacedotdev/oto/otohttp"
-	"gorm.io/gorm"
+	"github.com/uber/jaeger-lib/metrics"
+	"net/http"
 )
 
 // ConferenceService is a service for managing Conferences
@@ -19,13 +20,19 @@ type ConferenceService interface {
 
 type conferenceServiceServer struct {
 	server            *otohttp.Server
+	tracer            opentracing.Tracer
+	metricsFactory    metrics.Factory
+	logger            log.Factory
 	conferenceService ConferenceService
 }
 
 // Register adds the ConferenceService to the otohttp.Server.
-func RegisterConferenceService(server *otohttp.Server, conferenceService ConferenceService) {
+func RegisterConferenceService(metricsFactory metrics.Factory, tracer opentracing.Tracer, logger log.Factory, server *otohttp.Server, conferenceService ConferenceService) {
 	handler := &conferenceServiceServer{
 		server:            server,
+		tracer:            tracer,
+		logger:            logger,
+		metricsFactory:    metricsFactory,
 		conferenceService: conferenceService,
 	}
 	server.Register("ConferenceService", "Get", handler.handleGet)
@@ -33,6 +40,8 @@ func RegisterConferenceService(server *otohttp.Server, conferenceService Confere
 }
 
 func (s *conferenceServiceServer) handleGet(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("ConferenceService.Get")
+
 	var request GetConferenceRequest
 	if err := otohttp.Decode(r, &request); err != nil {
 		s.server.OnErr(w, r, err)
@@ -50,6 +59,8 @@ func (s *conferenceServiceServer) handleGet(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *conferenceServiceServer) handleList(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("ConferenceService.List")
+
 	var request ListConferenceRequest
 	if err := otohttp.Decode(r, &request); err != nil {
 		s.server.OnErr(w, r, err)
@@ -66,10 +77,47 @@ func (s *conferenceServiceServer) handleList(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// Conference is an event
+// EventSlot holds information for any sellable/giftable slot we have in the event
+// for a Talk or any other activity that requires admission.
+type EventSlot struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Cost        int    `json:"cost"`
+	Capacity    int    `json:"capacity"`
+	StartDate   uint64 `json:"startDate"`
+	EndDate     uint64 `json:"endDate"`
+	// DependsOn means that these two Slots need to be acquired together, user must
+	// either buy both Slots or pre-own one of the one it depends on.
+	DependsOn *EventSlot `json:"dependsOn"`
+	// PurchaseableFrom indicates when this item is on sale, for instance early bird
+	// tickets are the first ones to go on sale.
+	PurchaseableFrom uint64 `json:"purchaseableFrom"`
+	// PuchaseableUntil indicates when this item stops being on sale, for instance
+	// early bird tickets can no loger be purchased N months before event.
+	PurchaseableUntil uint64 `json:"purchaseableUntil"`
+	// AvailableToPublic indicates is this is something that will appear on the tickets
+	// purchase page (ie, we can issue sponsor tickets and those cannot be bought
+	// individually)
+	AvailableToPublic bool `json:"availableToPublic"`
+}
+
+// Event is an instance like GopherCon 2020
+type Event struct {
+	ID        uint        `json:"id"`
+	Name      string      `json:"name"`
+	Slug      string      `json:"slug"`
+	StartDate uint64      `json:"startDate"`
+	EndDate   uint64      `json:"endDate"`
+	Location  string      `json:"location"`
+	Slots     []EventSlot `json:"slots"`
+}
+
+// Conference is a brand like GopherCon
 type Conference struct {
-	gorm.Model
-	Name string `json:"name"`
+	ID     uint    `json:"id"`
+	Name   string  `json:"name"`
+	Events []Event `json:"events"`
 }
 
 // GetConferenceRequest is the request object for ConferenceService.Get.

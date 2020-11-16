@@ -5,15 +5,19 @@ package <%= def.PackageName %>
 import (
 	"context"
 	"net/http"
-
+	"github.com/opentracing/opentracing-go"
+"github.com/gopheracademy/manager/pkg/log"
 	"github.com/pacedotdev/oto/otohttp"
-	"gorm.io/gorm"
+	"github.com/uber/jaeger-lib/metrics"
+
+
 	<%= for (importPath, name) in def.Imports { %>
 	<%= name %> "<%= importPath %>"
 	<% } %>
 )
 
 <%= for (service) in def.Services { %>
+
 <%= format_comment_text(service.Comment) %>type <%= service.Name %> interface {
 <%= for (method) in service.Methods { %>
 	<%= format_comment_text(method.Comment) %><%= method.Name %>(context.Context, <%= method.InputObject.TypeName %>) (*<%= method.OutputObject.TypeName %>, error)<% } %>
@@ -21,21 +25,31 @@ import (
 <% } %>
 
 <%= for (service) in def.Services { %>
-type <%= camelize_down(service.Name) %>Server struct {
+
+	type <%= camelize_down(service.Name) %>Server struct {
 	server *otohttp.Server
+	tracer   opentracing.Tracer
+	metricsFactory metrics.Factory
+	logger   log.Factory
 	<%= camelize_down(service.Name) %> <%= service.Name %>
 }
 
+
 // Register adds the <%= service.Name %> to the otohttp.Server.
-func Register<%= service.Name %>(server *otohttp.Server, <%= camelize_down(service.Name) %> <%= service.Name %>) {
+func Register<%= service.Name %>(metricsFactory metrics.Factory,tracer opentracing.Tracer, logger log.Factory,server *otohttp.Server, <%= camelize_down(service.Name) %> <%= service.Name %>) {
 	handler := &<%= camelize_down(service.Name) %>Server{
 		server: server,
+		tracer: tracer,
+		logger: logger,
+		metricsFactory: metricsFactory,
 		<%= camelize_down(service.Name) %>: <%= camelize_down(service.Name) %>,
 	}
 	<%= for (method) in service.Methods { %>server.Register("<%= service.Name %>", "<%= method.Name %>", handler.handle<%= method.Name %>)
 	<% } %>}
 <%= for (method) in service.Methods { %>
 func (s *<%= camelize_down(service.Name) %>Server) handle<%= method.Name %>(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("<%= service.Name %>.<%= method.Name %>")
+
 	var request <%= method.InputObject.TypeName %>
 	if err := otohttp.Decode(r, &request); err != nil {
 		s.server.OnErr(w, r, err)
@@ -51,7 +65,6 @@ func (s *<%= camelize_down(service.Name) %>Server) handle<%= method.Name %>(w ht
 		return
 	}
 }
-<% } %>
 <% } %>
 
 <%= for (object) in def.Objects { %>
