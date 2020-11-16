@@ -3,7 +3,7 @@
 'use strict';
 
 <%= for (service) in def.Services { %> 
-export class <%= service.Name %> {
+export default class <%= service.Name %> {
 	<%= for (method) in service.Methods { %>
 	async <%= camelize_down(method.Name) %>(<%= camelize_down(method.InputObject.TypeName) %>) {
 		const headers = {

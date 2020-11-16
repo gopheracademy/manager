@@ -3,7 +3,7 @@
 'use strict';
 
  
-export class ConferenceService {
+export default class ConferenceService {
 	
 	async get(getConferenceRequest) {
 		const headers = {

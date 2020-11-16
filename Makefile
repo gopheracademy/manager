@@ -36,7 +36,7 @@ GO            = GOPATH=$(CURDIR)/.gopath GOBIN=$(CURDIR)/build go
 GO_BUILDFLAGS =
 GO_LDFLAGS    = -s -w
 
-$(CMD): www
+$(CMD):  generate www
 	$(GO) install $(GO_BUILDFLAGS) -ldflags '$(GO_LDFLAGS)' '$(PKG)'
 
 
@@ -54,5 +54,5 @@ vendor: FORCE
 
 # generate all the service files from the oto definitions in the def directory
 generate: FORCE
-	$(GO) generate
+	@./generate.sh
 .PHONY: FORCE
