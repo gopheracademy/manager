@@ -16,7 +16,7 @@ type Store interface {
 	CreateEvent(Event) error
 	GetEvent(Event) (Event, error)
 	GetEventByID(uint32) (Event, error)
-	GetEventSlots(uint32) ([]Slots, error)
+	GetEventSlots(uint32) ([]EventSlot, error)
 	UpdateEvent(Event) error
 	DeleteEvent(Event) error
 	DeleteEventByID(uint32) (Event, error)
@@ -24,7 +24,7 @@ type Store interface {
 	CreateConference(Conference) error
 	GetConference(Conference) (Conference, error)
 	GetConferenceByID(uint32) (Conference, error)
-	GetConferenceEvents(uint32) ([]Events, error)
+	GetConferenceEvents(uint32) ([]Event, error)
 	UpdateConference(Conference) error
 	DeleteConference(Conference) error
 	DeleteConferenceByID(uint32) (Conference, error)
