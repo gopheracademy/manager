@@ -1,27 +1,35 @@
 package def
 
 // Conference is a brand like GopherCon
+// store: "interface"
 type Conference struct {
-	ID     uint
-	Name   string
+	// store: "pk"
+	ID   uint32
+	Name string
+	// store: "hasmany"
 	Events []Event
 }
 
 // Event is an instance like GopherCon 2020
+// store: "interface"
 type Event struct {
-	ID        uint
+	// store: "pk"
+	ID        uint32
 	Name      string
 	Slug      string
 	StartDate uint64
 	EndDate   uint64
 	Location  string
-	Slots     []EventSlot
+	// store: "hasmany"
+	Slots []EventSlot
 }
 
 // EventSlot holds information for any sellable/giftable slot we have in the event for
 // a Talk or any other activity that requires admission.
+// store: "interface"
 type EventSlot struct {
-	ID          uint
+	// store: "pk"
+	ID          uint32
 	Name        string
 	Description string
 	Cost        int

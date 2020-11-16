@@ -30,6 +30,17 @@ func (c conferenceService) List(ctx context.Context, r ListConferenceRequest) (*
 	return resp, nil
 }
 
+func (c conferenceService) Create(ctx context.Context, r CreateConferenceRequest) (*CreateConferenceResponse, error) {
+	c.logger.For(ctx).Info("conferenceService.Create")
+	resp := &CreateConferenceResponse{}
+	return resp, nil
+}
+
+func (c conferenceService) Delete(ctx context.Context, r DeleteConferenceRequest) (*DeleteConferenceResponse, error) {
+	c.logger.For(ctx).Info("conferenceService.Delete")
+	resp := &DeleteConferenceResponse{}
+	return resp, nil
+}
 func (c conferenceService) Get(ctx context.Context, r GetConferenceRequest) (*GetConferenceResponse, error) {
 	c.logger.For(ctx).Info("conferenceService.Get")
 	resp := &GetConferenceResponse{

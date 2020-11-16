@@ -13,6 +13,8 @@ import (
 
 // ConferenceService is a service for managing Conferences
 type ConferenceService interface {
+	Create(context.Context, CreateConferenceRequest) (*CreateConferenceResponse, error)
+	Delete(context.Context, DeleteConferenceRequest) (*DeleteConferenceResponse, error)
 	Get(context.Context, GetConferenceRequest) (*GetConferenceResponse, error)
 	// Greet prepares a lovely greeting.
 	List(context.Context, ListConferenceRequest) (*ListConferenceResponse, error)
@@ -35,8 +37,48 @@ func RegisterConferenceService(metricsFactory metrics.Factory, tracer opentracin
 		metricsFactory:    metricsFactory,
 		conferenceService: conferenceService,
 	}
+	server.Register("ConferenceService", "Create", handler.handleCreate)
+	server.Register("ConferenceService", "Delete", handler.handleDelete)
 	server.Register("ConferenceService", "Get", handler.handleGet)
 	server.Register("ConferenceService", "List", handler.handleList)
+}
+
+func (s *conferenceServiceServer) handleCreate(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("ConferenceService.Create")
+
+	var request CreateConferenceRequest
+	if err := otohttp.Decode(r, &request); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	response, err := s.conferenceService.Create(r.Context(), request)
+	if err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	if err := otohttp.Encode(w, r, http.StatusOK, response); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+}
+
+func (s *conferenceServiceServer) handleDelete(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("ConferenceService.Delete")
+
+	var request DeleteConferenceRequest
+	if err := otohttp.Decode(r, &request); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	response, err := s.conferenceService.Delete(r.Context(), request)
+	if err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	if err := otohttp.Encode(w, r, http.StatusOK, response); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
 }
 
 func (s *conferenceServiceServer) handleGet(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +122,7 @@ func (s *conferenceServiceServer) handleList(w http.ResponseWriter, r *http.Requ
 // EventSlot holds information for any sellable/giftable slot we have in the event
 // for a Talk or any other activity that requires admission.
 type EventSlot struct {
-	ID          uint   `json:"id"`
+	ID          uint32 `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Cost        int    `json:"cost"`
@@ -104,7 +146,7 @@ type EventSlot struct {
 
 // Event is an instance like GopherCon 2020
 type Event struct {
-	ID        uint        `json:"id"`
+	ID        uint32      `json:"id"`
 	Name      string      `json:"name"`
 	Slug      string      `json:"slug"`
 	StartDate uint64      `json:"startDate"`
@@ -115,18 +157,41 @@ type Event struct {
 
 // Conference is a brand like GopherCon
 type Conference struct {
-	ID     uint    `json:"id"`
+	ID     uint32  `json:"id"`
 	Name   string  `json:"name"`
 	Events []Event `json:"events"`
 }
 
+// CreateConferenceRequest is the request object for ConferenceService.Create.
+type CreateConferenceRequest struct {
+	Conference Conference `json:"conference"`
+}
+
+// CreateConferenceResponse is the response object for ConferenceService.Create.
+type CreateConferenceResponse struct {
+	Conference Conference `json:"conference"`
+	// Error is string explaining what went wrong. Empty if everything was fine.
+	Error string `json:"error,omitempty"`
+}
+
+// DeleteConferenceRequest is the request object for ConferenceService.Delete.
+type DeleteConferenceRequest struct {
+	ID uint32 `json:"id"`
+}
+
+// DeleteConferenceResponse is the response object for ConferenceService.Delete.
+type DeleteConferenceResponse struct {
+	// Error is string explaining what went wrong. Empty if everything was fine.
+	Error string `json:"error,omitempty"`
+}
+
 // GetConferenceRequest is the request object for ConferenceService.Get.
 type GetConferenceRequest struct {
+	ID uint32 `json:"id"`
 }
 
 // GetConferenceResponse is the response object containing a single Conference
 type GetConferenceResponse struct {
-
 	// Conference represents an event like GopherCon 2020
 	Conference Conference `json:"conference"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
@@ -139,7 +204,6 @@ type ListConferenceRequest struct {
 
 // ListConferenceResponse is the response object containing a list of Conferences
 type ListConferenceResponse struct {
-
 	// Greeting is a nice message welcoming somebody.
 	Conferences []Conference `json:"conferences"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
