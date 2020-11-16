@@ -5,4 +5,11 @@ services:
     ports:
       - "6831:6831/udp"
       - "16686:16686"
-
+  database:
+    image: "postgres" # use latest official postgres version
+    env_file:
+      - database.env # configure postgres
+    volumes:
+      - database-data:/var/lib/postgresql/data/ # persist data even if container shuts down
+volumes:
+  database-data: # named volumes can be managed easier using docker-compose

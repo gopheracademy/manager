@@ -25,7 +25,7 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/gopheracademy/manager/pkg/log"
+	"github.com/gopheracademy/manager/log"
 )
 
 // Init creates a new instance of Jaeger tracer.

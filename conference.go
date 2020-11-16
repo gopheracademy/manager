@@ -6,7 +6,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-lib/metrics"
 
-	"github.com/gopheracademy/manager/pkg/log"
+	"github.com/gopheracademy/manager/log"
 )
 
 type conferenceService struct {

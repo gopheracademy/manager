@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gopheracademy/manager/pkg/log"
-	"github.com/gopheracademy/manager/pkg/tracing"
+	"github.com/gopheracademy/manager/log"
+	"github.com/gopheracademy/manager/tracing"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	jexpvar "github.com/uber/jaeger-lib/metrics/expvar"
 	jprom "github.com/uber/jaeger-lib/metrics/prometheus"

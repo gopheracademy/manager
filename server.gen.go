@@ -4,7 +4,7 @@ package main
 
 import (
 	"context"
-	"github.com/gopheracademy/manager/pkg/log"
+	"github.com/gopheracademy/manager/log"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pacedotdev/oto/otohttp"
 	"github.com/uber/jaeger-lib/metrics"
