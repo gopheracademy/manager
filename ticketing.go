@@ -1,34 +1,6 @@
-package def
+package main
 
-import (
-	"time"
-
-	"github.com/shopspring/decimal" //this is an arbitrary pick
-)
-
-// EventSlot holds information for any sellable/giftable slot we have in the event for
-// a Talk or any other activity that requires admission.
-type EventSlot struct {
-	ID          uint
-	Name        string
-	Description string
-	Cost        decimal.Decimal
-	Capacity    int // int should be enough even if we organize glastonbury
-	StartDate   time.Time
-	EndDate     time.Time
-	// DependsOn means that these two Slots need to be acquired together, user must either buy
-	// both Slots or pre-own one of the one it depends on.
-	DependsOn *EventSlot
-	// PurchaseableFrom indicates when this item is on sale, for instance early bird tickets are the first
-	// ones to go on sale.
-	PurchaseableFrom time.Time
-	// PuchaseableUntil indicates when this item stops being on sale, for instance early bird tickets can
-	// no loger be purchased N months before event.
-	PurchaseableUntil time.Time
-	// AvailableToPublic indicates is this is something that will appear on the tickets purchase page (ie, we can
-	// issue sponsor tickets and those cannot be bought individually)
-	AvailableToPublic bool
-}
+//this is an arbitrary pick
 
 // ClaimPayment represents a payment for N claims
 type ClaimPayment struct {
@@ -40,10 +12,10 @@ type ClaimPayment struct {
 }
 
 // TotalDue returns the total cost to cover by this payment.
-func (c *ClaimPayment) TotalDue() decimal.Decimal {
-	totalDue := decimal.Zero
+func (c *ClaimPayment) TotalDue() int {
+	totalDue := 0
 	for _, sc := range c.ClaimsPayed {
-		totalDue = totalDue.Add(sc.EventSlot.Cost)
+		totalDue = totalDue + sc.EventSlot.Cost
 	}
 	return totalDue
 }
@@ -81,11 +53,11 @@ type Attendee struct {
 // PaymentMethodMoney represents a payment in cash.
 type PaymentMethodMoney struct {
 	PaymentRef string // stripe payment ID/Log?
-	Amount     decimal.Decimal
+	Amount     int
 }
 
 // Total implements FinancialInstrument
-func (p *PaymentMethodMoney) Total() decimal.Decimal {
+func (p *PaymentMethodMoney) Total() int {
 	return p.Amount
 }
 
@@ -100,11 +72,11 @@ var _ FinancialInstrument = &PaymentMethodMoney{}
 type PaymentMethodConferenceDiscount struct {
 	// Detail describes what kind of discount was issued (ie 100% sponsor, 30% grant)
 	Detail string
-	Amount decimal.Decimal
+	Amount int
 }
 
 // Total implements FinancialInstrument
-func (p *PaymentMethodConferenceDiscount) Total() decimal.Decimal {
+func (p *PaymentMethodConferenceDiscount) Total() int {
 	return p.Amount
 }
 
@@ -118,11 +90,11 @@ var _ FinancialInstrument = &PaymentMethodConferenceDiscount{}
 // PaymentMethodCreditNote represents credit extended to defer payment.
 type PaymentMethodCreditNote struct {
 	Detail string
-	Amount decimal.Decimal
+	Amount int
 }
 
 // Total implements FinancialInstrument
-func (p *PaymentMethodCreditNote) Total() decimal.Decimal {
+func (p *PaymentMethodCreditNote) Total() int {
 	return p.Amount
 }
 
@@ -147,43 +119,45 @@ const (
 )
 
 // FinancialInstrument represents any kind of instrument used to cover a debt.
+// oto: "skip"
 type FinancialInstrument interface {
 	// Total is the total amount fulfilled by this instrument
-	Total() decimal.Decimal
+	Total() int
 	// Type is the type of asset represented
 	Type() AssetType
 }
 
 // PaymentBalanced returns true or false depending on balancing status and missing
 // payment amount if any.
-func PaymentBalanced(amount decimal.Decimal, payments ...FinancialInstrument) (bool, decimal.Decimal) {
-	receivables := decimal.Zero
-	received := decimal.Zero
+func PaymentBalanced(amount int, payments ...FinancialInstrument) (bool, int) {
+	receivables := 0
+	received := 0
 	for _, p := range payments {
 		switch p.Type() {
 		case ATCash, ATDiscount:
-			received.Add(p.Total())
+			received = received + p.Total()
 		case ATReceivable:
-			receivables.Add(p.Total())
+			receivables = receivables + p.Total()
 		}
 	}
-	missing := amount.Sub(received).Sub(receivables)
-	return missing.LessThanOrEqual(decimal.Zero), missing
+	missing := amount - received - receivables
+	return missing <= 0, missing
 }
 
 // DebtBalanced returns true if all cretid notes or similar instruments have been covered or an
 // amount if not.
-func DebtBalanced(payments ...FinancialInstrument) (bool, decimal.Decimal) {
-	receivables := decimal.Zero
-	received := decimal.Zero
+func DebtBalanced(payments ...FinancialInstrument) (bool, int) {
+	receivables := 0
+	received := 0
 	for _, p := range payments {
 		switch p.Type() {
 		case ATCash, ATDiscount:
-			received.Add(p.Total())
+			received = received + p.Total()
 		case ATReceivable:
-			receivables.Add(p.Total())
+			receivables = receivables + p.Total()
+
 		}
 	}
-	missing := receivables.Sub(received)
-	return missing.LessThanOrEqual(decimal.Zero), missing
+	missing := receivables - received
+	return missing <= 0, missing
 }

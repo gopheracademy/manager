@@ -2,14 +2,31 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gopheracademy/manager/pkg/log"
+	"github.com/gopheracademy/manager/pkg/tracing"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	jexpvar "github.com/uber/jaeger-lib/metrics/expvar"
+	jprom "github.com/uber/jaeger-lib/metrics/prometheus"
+
 	"github.com/pacedotdev/oto/otohttp"
+	"github.com/uber/jaeger-lib/metrics"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+var (
+	metricsBackend string = "prometheus"
+	logger         *zap.Logger
+	metricsFactory metrics.Factory
+
+	basepath string
+	jaegerUI string
 )
 
 // spaHandler implements the http.Handler interface, so we can use it
@@ -56,26 +73,55 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	onInitialize()
+	zapLogger := logger.With(zap.String("service", "showrunner"))
+	logg := log.NewFactory(zapLogger)
+	mytracer := tracing.Init("showrunner", metricsFactory, logg)
+	tracedRouter := tracing.NewServeMux(mytracer)
+	tracedRouter.Mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		// an example API handler
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	})
-	var conferenceService conferenceService
+	conferenceService := newconferenceService(mytracer, metricsFactory, logg)
 	server := otohttp.NewServer()
-	RegisterConferenceService(server, conferenceService)
-	router.Handle("/oto/", server)
+
+	RegisterConferenceService(metricsFactory.Namespace(metrics.NSOptions{Name: "conference.service"}), mytracer,
+		logg, server, conferenceService)
+
+	tracedRouter.Handle("/oto/", server)
 	spa := spaHandler{staticPath: "./www/public", indexPath: "index.html"}
-	router.PathPrefix("/").Handler(spa)
+
+	tracedRouter.Mux.Handle("/metrics", promhttp.Handler()) // Prometheus
+	tracedRouter.Mux.PathPrefix("/").Handler(spa)
 
 	srv := &http.Server{
-		Handler: router,
+		Handler: tracedRouter,
 		Addr:    "127.0.0.1:8000",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.Fatal(srv.ListenAndServe())
+	zapLogger.Fatal(srv.ListenAndServe().Error())
+
+}
+
+// onInitialize is called before the command is executed.
+func onInitialize() {
+	rand.Seed(int64(time.Now().Nanosecond()))
+	logger, _ = zap.NewDevelopment(
+		zap.AddStacktrace(zapcore.FatalLevel),
+		zap.AddCallerSkip(1),
+	)
+
+	switch metricsBackend {
+	case "expvar":
+		metricsFactory = jexpvar.NewFactory(10) // 10 buckets for histograms
+		logger.Info("Using expvar as metrics backend")
+	case "prometheus":
+		metricsFactory = jprom.New().Namespace(metrics.NSOptions{Name: "showrunner", Tags: nil})
+		logger.Info("Using Prometheus as metrics backend")
+	default:
+		logger.Fatal("unsupported metrics backend " + metricsBackend)
+	}
 }
