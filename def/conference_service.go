@@ -5,10 +5,32 @@ type ConferenceService interface {
 	// Greet prepares a lovely greeting.
 	List(ListConferenceRequest) ListConferenceResponse
 	Get(GetConferenceRequest) GetConferenceResponse
+	Create(CreateConferenceRequest) CreateConferenceResponse
+	Delete(DeleteConferenceRequest) DeleteConferenceResponse
+}
+
+// DeleteConferenceRequest is the request object for ConferenceService.Delete.
+type DeleteConferenceRequest struct {
+	ID uint32
+}
+
+// DeleteConferenceResponse is the response object for ConferenceService.Delete.
+type DeleteConferenceResponse struct {
+}
+
+// CreateConferenceRequest is the request object for ConferenceService.Create.
+type CreateConferenceRequest struct {
+	Conference Conference
+}
+
+// CreateConferenceResponse is the response object for ConferenceService.Create.
+type CreateConferenceResponse struct {
+	Conference Conference
 }
 
 // GetConferenceRequest is the request object for ConferenceService.Get.
 type GetConferenceRequest struct {
+	ID uint32
 }
 
 // GetConferenceResponse is the response object containing a

@@ -5,6 +5,46 @@
  
 export default class ConferenceService {
 	
+	async create(createConferenceRequest) {
+		const headers = {
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
+		}
+		createConferenceRequest = createConferenceRequest || {}
+		const response = await fetch('/oto/ConferenceService.Create', {
+			method: 'POST',
+			headers: headers,
+			body: JSON.stringify(createConferenceRequest)
+		})
+		return response.json().then((json) => {
+			if (json.error) {
+				throw new Error(json.error)
+			}
+			return json
+		})
+	}
+	
+	async delete(deleteConferenceRequest) {
+		const headers = {
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
+		}
+		deleteConferenceRequest = deleteConferenceRequest || {}
+		const response = await fetch('/oto/ConferenceService.Delete', {
+			method: 'POST',
+			headers: headers,
+			body: JSON.stringify(deleteConferenceRequest)
+		})
+		return response.json().then((json) => {
+			if (json.error) {
+				throw new Error(json.error)
+			}
+			return json
+		})
+	}
+	
 	async get(getConferenceRequest) {
 		const headers = {
 			'Accept':		'application/json',
