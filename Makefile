@@ -37,7 +37,7 @@ GO_BUILDFLAGS =
 GO_LDFLAGS    = -s -w
 
 $(CMD):  generate www
-	$(GO) install $(GO_BUILDFLAGS) -ldflags '$(GO_LDFLAGS)' '$(PKG)'
+	$(GO) build $(GO_BUILDFLAGS) -ldflags '$(GO_LDFLAGS)' '$(PKG)'
 
 
 ################################################################################

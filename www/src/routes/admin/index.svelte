@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import ConferenceService from "../client.gen.js";
+  import ConferenceService from "$components/client.gen.js";
 
   let conference = {};
   onMount(async () => {
@@ -52,7 +52,7 @@
 </style>
 
 <main>
-  <h1>Hello world!</h1>
+  <h1>Admin</h1>
 
   {#await conference then value}
     <!-- promise was fulfilled -->

@@ -89,7 +89,7 @@ func main() {
 		logg, server, conferenceService)
 
 	tracedRouter.Handle("/oto/", server)
-	spa := spaHandler{staticPath: "./www/public", indexPath: "index.html"}
+	spa := spaHandler{staticPath: "./www/build", indexPath: "index.html"}
 
 	tracedRouter.Mux.Handle("/metrics", promhttp.Handler()) // Prometheus
 	tracedRouter.Mux.PathPrefix("/").Handler(spa)
