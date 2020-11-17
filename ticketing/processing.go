@@ -1,57 +1,74 @@
-package business
+package ticketing
 
 import (
 	"fmt"
 
-	"github.com/gopheracademy/manager/build"
 	uuid "github.com/satori/go.uuid"
 )
 
+// PurchaseStore offers functionality for persistence of ticketing models.
 type PurchaseStore interface {
-	CreateSlotClaim(*build.SlotClaim) (*build.SlotClaim, error)
+	// AtomicOperation returns a store which will act as one single atomic operation.
+	// It returns a commit and cancel functions and the Store .
+	AtomicOperation() (func() error, func() error, PurchaseStore, error)
+	// CreateSlotClaim saves a slot claim and returns it with the populated ID
+	CreateSlotClaim(*SlotClaim) (*SlotClaim, error)
 
-	UpdateAttendee(*build.Attendee) (*build.Attendee, error)
+	// UpdateAttendee saves the passed attendee attributes on top of the existing one.
+	UpdateAttendee(*Attendee) (*Attendee, error)
 
-	CreateClaimPayment(*build.ClaimPayment) (*build.ClaimPayment, error)
+	CreateClaimPayment(*ClaimPayment) (*ClaimPayment, error)
 
-	UpdateClaimPayment(*build.ClaimPayment) (*build.ClaimPayment, error)
-	ChangeSlotClaimOwner([]build.SlotClaim, *build.Attendee, *build.Attendee) (*build.Attendee, *build.Attendee, error)
+	UpdateClaimPayment(*ClaimPayment) (*ClaimPayment, error)
+	ChangeSlotClaimOwner([]SlotClaim, *Attendee, *Attendee) (*Attendee, *Attendee, error)
 }
 
 // ClaimSlots claims N slots for an attendee.
 func ClaimSlots(storer PurchaseStore,
-	attendee *build.Attendee, slots ...build.EventSlot) ([]build.SlotClaim, error) {
-	var err error
-	var claims = make([]build.SlotClaim, 0, len(slots))
+	attendee *Attendee, slots ...EventSlot) ([]SlotClaim, error) {
+	succed, fail, atomic, err := storer.AtomicOperation()
+	if err != nil {
+		return nil, fmt.Errorf("beginning atomic operation: %w", err)
+	}
+	var claims = make([]SlotClaim, 0, len(slots))
 	for i := range slots {
 		slot := slots[i]
-		sc := &build.SlotClaim{
+		sc := &SlotClaim{
 			EventSlot: &slot,
 			TicketID:  uuid.NewV4().String(),
 		}
-		sc, err = storer.CreateSlotClaim(sc)
+		sc, err = atomic.CreateSlotClaim(sc)
 		if err != nil {
+			if atomicErr := fail(); atomicErr != nil {
+				err = fmt.Errorf("%w (also cancelling atomic operation: %v)", err, atomicErr)
+			}
 			return nil, fmt.Errorf("Claiming a slot: %w", err)
 		}
 		claims[i] = *sc
 	}
 	attendee.Claims = append(attendee.Claims, claims...)
-	_, err = storer.UpdateAttendee(attendee)
+	_, err = atomic.UpdateAttendee(attendee)
 	if err != nil {
+		if atomicErr := fail(); atomicErr != nil {
+			err = fmt.Errorf("%w (also cancelling atomic operation: %v)", err, atomicErr)
+		}
 		return nil, fmt.Errorf("Updating claimed slots for attendee: %w", err)
+	}
+	if err := succed(); err != nil {
+		return nil, fmt.Errorf("confirming atomic operation: %w", err)
 	}
 	return claims, nil
 }
 
 // PayClaims assigns payments and/or credits to a set of claims.
 func PayClaims(store PurchaseStore,
-	attendee *build.Attendee, claims []build.SlotClaim,
-	payments []build.FinancialInstrument) (*build.ClaimPayment, error) {
-	ptrClaims := make([]*build.SlotClaim, len(claims))
+	attendee *Attendee, claims []SlotClaim,
+	payments []FinancialInstrument) (*ClaimPayment, error) {
+	ptrClaims := make([]*SlotClaim, len(claims))
 	for i := range claims {
 		ptrClaims[i] = &claims[i]
 	}
-	claimPayment := &build.ClaimPayment{
+	claimPayment := &ClaimPayment{
 		ClaimsPayed: ptrClaims,
 		Payment:     payments,
 	}
@@ -66,7 +83,7 @@ func PayClaims(store PurchaseStore,
 // ErrInvalidCurrency should be returned when paying with the wrong kind of instrument
 // for instance covering credit with credit.
 type ErrInvalidCurrency struct {
-	currencyType build.AssetType
+	currencyType AssetType
 }
 
 func (e *ErrInvalidCurrency) Error() string {
@@ -75,10 +92,10 @@ func (e *ErrInvalidCurrency) Error() string {
 
 // CoverCredit adds funds to a payment to cover for receivables.
 func CoverCredit(store PurchaseStore,
-	existingPayment *build.ClaimPayment,
-	payments []build.FinancialInstrument) error {
+	existingPayment *ClaimPayment,
+	payments []FinancialInstrument) error {
 	for i := range payments {
-		if payments[i].Type() == build.ATReceivable {
+		if payments[i].Type() == ATReceivable {
 			return &ErrInvalidCurrency{currencyType: payments[i].Type()}
 		}
 		existingPayment.Payment = append(existingPayment.Payment, payments[i])
@@ -92,7 +109,7 @@ func CoverCredit(store PurchaseStore,
 
 // TransferClaims transfer claims from one user the the other, assuming they belong to the first.
 func TransferClaims(storer PurchaseStore,
-	source, target *build.Attendee, claims []build.SlotClaim) (*build.Attendee, *build.Attendee, error) {
+	source, target *Attendee, claims []SlotClaim) (*Attendee, *Attendee, error) {
 	var err error
 	sourceClaimsMap := map[uint64]bool{}
 	for i := range source.Claims {
