@@ -5,6 +5,8 @@ import (
 
 	"github.com/ShiftLeftSecurity/gaum/db/chain"
 	"github.com/ShiftLeftSecurity/gaum/db/connection"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -29,29 +31,38 @@ const (
 
 // CreateSlotClaim saves a slot claim and returns it with the populated ID
 func (s *SQLStorage) CreateSlotClaim(slotClaim *SlotClaim) (*SlotClaim, error) {
-	q := chain.New(s.conn)
-	results := []SlotClaim{}
-	err := q.Insert(map[string]interface{}{
-		"ticket_id":     slotClaim.TicketID,
-		"redeemed":      slotClaim.Redeemed,
-		"event_slot_id": slotClaim.EventSlot.ID,
-	}).
-		Table(tableSlotClaims).
-		OnConflict(func(c *chain.OnConflict) {
-			// if this clashes again entropy might be broken, check if not 2020
-			c.OnConstraint(ticketIDUniqueConstraint).
-				DoUpdate().
-				Set("ticket_id", uuid.NewV4().String())
+	var err error
+	// FIXME: Add a check for capacity not exceeded on event.
+	for i := 0; i < 3; i++ {
+		q := chain.New(s.conn)
+		results := []SlotClaim{}
+		err = q.Insert(map[string]interface{}{
+			"ticket_id":     slotClaim.TicketID,
+			"redeemed":      slotClaim.Redeemed,
+			"event_slot_id": slotClaim.EventSlot.ID,
 		}).
-		Returning("id, ticket_id, redeemed").Fetch(&results)
-	if err != nil {
-		return nil, fmt.Errorf("saving slot claim: %w", err)
+			Table(tableSlotClaims).
+			Returning("id, ticket_id, redeemed").Fetch(&results)
+
+		if err != nil {
+			// there is no SQL for "on error change the inserting statement", only to change
+			// the existing one.
+			if err, ok := err.(pgx.PgError); ok {
+				if pgerrcode.IsIntegrityConstraintViolation(err.Code) {
+					// if this clashes again entropy might be broken, check if not 2020
+					slotClaim.TicketID = uuid.NewV4().String()
+					continue
+				}
+			}
+			return nil, fmt.Errorf("saving slot claim: %w", err)
+		}
+		if len(results) == 0 {
+			return nil, nil
+		}
+		results[0].EventSlot = slotClaim.EventSlot
+		return &results[0], nil
 	}
-	if len(results) == 0 {
-		return nil, nil
-	}
-	results[0].EventSlot = slotClaim.EventSlot
-	return &results[0], nil
+	return nil, fmt.Errorf("failed to insert: %w", err)
 }
 
 const (
@@ -82,7 +93,7 @@ func (s *SQLStorage) UpdateAttendee(attendee *Attendee) (*Attendee, error) {
 			"slot_claim_id": c.Redeemed,
 		}).Table(tableAttendeeSlotClaims).
 			OnConflict(func(c *chain.OnConflict) {
-				// if this clashes again entropy might be broken, check if not 2020
+				// This claim was someone else's, this might be the result of transfering.
 				c.OnConstraint(slotClaimIDUniqueConstraint).
 					DoUpdate().
 					Set("attendee_id", attendee.ID)

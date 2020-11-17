@@ -5,6 +5,8 @@ go 1.15
 require (
 	github.com/ShiftLeftSecurity/gaum v1.0.10 // indirect
 	github.com/gorilla/mux v1.8.0
+	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451 // indirect
+	github.com/jackc/pgx v3.6.2+incompatible // indirect
 	github.com/jaegertracing/jaeger v1.21.0
 	github.com/opentracing-contrib/go-grpc v0.0.0-20200813121455-4a6760c71486
 	github.com/opentracing-contrib/go-stdlib v0.0.0-20190519235532-cf7a6c988dc9
