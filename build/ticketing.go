@@ -26,7 +26,7 @@ type EventSlot struct {
 
 // ClaimPayment represents a payment for N claims
 type ClaimPayment struct {
-	ID string //uuid
+	ID uint64
 	// ClaimsPayed would be what in a bill one see as detail.
 	ClaimsPayed []*SlotClaim
 	Payment     []FinancialInstrument
@@ -52,7 +52,7 @@ func (c *ClaimPayment) Fulfilled() bool {
 
 // SlotClaim represents one occupancy of one slot.
 type SlotClaim struct {
-	ID        string // uuid
+	ID        uint64
 	EventSlot *EventSlot
 	// TicketID should only be valid when combined with the correct Attendee ID/Email
 	TicketID string // uuid
