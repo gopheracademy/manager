@@ -1,36 +1,39 @@
 package ticketing
 
+import "github.com/gopheracademy/manager/def"
+
 // EventSlot holds information for any sellable/giftable slot we have in the event for
 // a Talk or any other activity that requires admission.
 type EventSlot struct {
-	ID          uint64
-	Name        string
-	Description string
-	Cost        int64
-	Capacity    int    // int should be enough even if we organize glastonbury
-	StartDate   uint64 // StartDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
-	EndDate     uint64 // EndDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
+	ID          uint64     `gaum:"field_name:id"`
+	Event       *def.Event `gaum:"field_name:event"`
+	Name        string     `gaum:"field_name:name"`
+	Description string     `gaum:"field_name:description"`
+	Cost        int64      `gaum:"field_name:cost"`
+	Capacity    int        `gaum:"field_name:capacity"`   // int should be enough even if we organize glastonbury
+	StartDate   uint64     `gaum:"field_name:start_date"` // StartDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
+	EndDate     uint64     `gaum:"field_name:end_date"`   // EndDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// DependsOn means that these two Slots need to be acquired together, user must either buy
 	// both Slots or pre-own one of the one it depends on.
 	DependsOn *EventSlot
 	// PurchaseableFrom indicates when this item is on sale, for instance early bird tickets are the first
 	// ones to go on sale.
-	PurchaseableFrom uint64 // PurchaseableFrom is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
+	PurchaseableFrom uint64 `gaum:"field_name:purchaseable_from"` // PurchaseableFrom is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// PuchaseableUntil indicates when this item stops being on sale, for instance early bird tickets can
 	// no loger be purchased N months before event.
-	PurchaseableUntil uint64 // PurchaseableUntil is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
+	PurchaseableUntil uint64 `gaum:"field_name:purchaseable_until"` // PurchaseableUntil is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// AvailableToPublic indicates is this is something that will appear on the tickets purchase page (ie, we can
 	// issue sponsor tickets and those cannot be bought individually)
-	AvailableToPublic bool
+	AvailableToPublic bool `gaum:"field_name:available_to_public"`
 }
 
 // ClaimPayment represents a payment for N claims
 type ClaimPayment struct {
-	ID uint64
+	ID uint64 `gaum:"field_name:id"`
 	// ClaimsPayed would be what in a bill one see as detail.
 	ClaimsPayed []*SlotClaim
 	Payment     []FinancialInstrument
-	Invoice     string // let us fill this once we know how to invoice
+	Invoice     string `gaum:"field_name:invoice"` // let us fill this once we know how to invoice
 }
 
 // TotalDue returns the total cost to cover by this payment.
@@ -52,21 +55,21 @@ func (c *ClaimPayment) Fulfilled() bool {
 
 // SlotClaim represents one occupancy of one slot.
 type SlotClaim struct {
-	ID        uint64
+	ID        uint64 `gaum:"field_name:id"`
 	EventSlot *EventSlot
 	// TicketID should only be valid when combined with the correct Attendee ID/Email
-	TicketID string // uuid
+	TicketID string `gaum:"field_name:ticket_id"` // uuid
 	// Redeemed represents whether this has been used (ie the Attendee enrolled in front desk
 	// or into the online conf system) until this is not true, transfer/refund might be possible.
-	Redeemed bool
+	Redeemed bool `gaum:"field_name:redeemed"`
 }
 
 // Attendee is a person attending one or more Slots of the Conference.
 type Attendee struct {
-	ID    uint64
-	Email string
+	ID    uint64 `gaum:"field_name:id"`
+	Email string `gaum:"field_name:email"`
 	// CoCAccepted, claims cannot be used without this.
-	CoCAccepted bool
+	CoCAccepted bool `gaum:"field_name:co_c_accepted"`
 	Claims      []SlotClaim
 }
 
@@ -74,9 +77,9 @@ type Attendee struct {
 
 // PaymentMethodMoney represents a payment in cash.
 type PaymentMethodMoney struct {
-	ID         uint64
-	PaymentRef string // stripe payment ID/Log?
-	Amount     int64  // Money is handled in ints to ease use of OTO, do not divide
+	ID         uint64 `gaum:"field_name:id"`
+	PaymentRef string `gaum:"field_name:ref"`    // stripe payment ID/Log?
+	Amount     int64  `gaum:"field_name:amount"` // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument
@@ -93,10 +96,10 @@ var _ FinancialInstrument = &PaymentMethodMoney{}
 
 // PaymentMethodConferenceDiscount represents a discount issued by the event.
 type PaymentMethodConferenceDiscount struct {
-	ID uint64
+	ID uint64 `gaum:"field_name:id"`
 	// Detail describes what kind of discount was issued (ie 100% sponsor, 30% grant)
-	Detail string
-	Amount int64 // Money is handled in ints to ease use of OTO, do not divide
+	Detail string `gaum:"field_name:detail"`
+	Amount int64  `gaum:"field_name:amount"` // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument
@@ -113,9 +116,9 @@ var _ FinancialInstrument = &PaymentMethodConferenceDiscount{}
 
 // PaymentMethodCreditNote represents credit extended to defer payment.
 type PaymentMethodCreditNote struct {
-	ID     uint64
-	Detail string
-	Amount int64 // Money is handled in ints to ease use of OTO, do not divide
+	ID     uint64 `gaum:"field_name:id"`
+	Detail string `gaum:"field_name:detail"`
+	Amount int64  `gaum:"field_name:amount"` // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument

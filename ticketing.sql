@@ -1,16 +1,18 @@
 CREATE TABLE event_slot (
     id BIGSERIAL PRIMARY KEY,
+    event_id BIGINT,
     name VARCHAR(100),
     description TEXT, 
     cost INTEGER, 
     capacity INT, 
     start_date TIMESTAMP WITH TIME ZONE,
     end_date TIMESTAMP WITH TIME ZONE,
-    depends_on BIGINT, 
+    depends_on_id BIGINT, 
     purchaseable_from TIMESTAMP WITH TIME ZONE,
     purchaseable_until TIMESTAMP WITH TIME ZONE,
     available_to_public BOOLEAN,
-    FOREIGN KEY(depends_on) REFERENCES event_slot(id)
+    FOREIGN KEY(depends_on_id) REFERENCES event_slot(id),
+    FOREIGN KEY(event_id) REFERENCES event(id)
 );
 
 CREATE TABLE slot_claim (

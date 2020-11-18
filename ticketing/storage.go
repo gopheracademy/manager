@@ -10,6 +10,7 @@ import (
 	"github.com/ShiftLeftSecurity/gaum/db/connection"
 	"github.com/ShiftLeftSecurity/gaum/db/logging"
 	"github.com/ShiftLeftSecurity/gaum/db/postgres"
+	"github.com/gopheracademy/manager/def"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx"
 	uuid "github.com/satori/go.uuid"
@@ -70,6 +71,206 @@ const (
 	tableSlotClaims          = "slot_claim"
 )
 
+// CreateAttendee creates a new attendee in the database and returns it.
+func (s *SQLStorage) CreateAttendee(a *Attendee) (*Attendee, error) {
+	results := []Attendee{}
+	err := chain.New(s.conn).Insert(map[string]interface{}{
+		"email":        a.Email,
+		"coc_accepted": a.CoCAccepted,
+	}).Table(tableAttendee).Returning("*").
+		Fetch(&results)
+	if err != nil {
+		return nil, fmt.Errorf("creating new attendee: %w", err)
+	}
+	if len(results) == 0 {
+		return nil, fmt.Errorf("attendee was not created")
+	}
+	newClaims := make([]SlotClaim, len(a.Claims))
+	for i := range a.Claims {
+		c := a.Claims[i]
+		returnedClaims := []SlotClaim{}
+		err := chain.New(s.conn).Insert(map[string]interface{}{
+			"attendee_id":   results[0].ID,
+			"slot_claim_id": c.Redeemed,
+		}).Table(tableAttendeeSlotClaims).
+			OnConflict(func(c *chain.OnConflict) {
+				// This claim was someone else's, this might be the result of transfering.
+				c.OnConstraint(slotClaimIDUniqueConstraint).
+					DoUpdate().
+					Set("attendee_id", results[0].ID)
+			}).Returning("*").Fetch(&returnedClaims)
+		if err != nil {
+			return nil, fmt.Errorf("inserting attendee claims: %w", err)
+		}
+		if len(returnedClaims) == 0 {
+			return nil, fmt.Errorf("could not create claim")
+		}
+		newClaims[i] = returnedClaims[0]
+	}
+	newAttendee := results[0]
+	newAttendee.Claims = newClaims
+	return &newAttendee, nil
+}
+
+// ReadAttendeeByEmail returns an attendee for that email if one exists.
+func (s *SQLStorage) ReadAttendeeByEmail(email string) (*Attendee, error) {
+	if email == "" {
+		return nil, fmt.Errorf("email is empty")
+	}
+	return s.readAttendee(email, 0)
+}
+
+// ReadAttendeeByID returns an attendee for the given ID if one exists.
+func (s *SQLStorage) ReadAttendeeByID(id uint64) (*Attendee, error) {
+	if id == 0 {
+		return nil, fmt.Errorf("id is not valid")
+	}
+	return s.readAttendee("", id)
+}
+
+func (s *SQLStorage) readAttendee(email string, id uint64) (*Attendee, error) {
+	results := []Attendee{}
+	q := chain.New(s.conn).Select("*").From(tableAttendee)
+	if email != "" {
+		q.AndWhere("email = ?", email)
+	}
+	if id != 0 {
+		q.AndWhere("id = ?", id)
+	}
+	err := q.Fetch(&results)
+	if err != nil {
+		return nil, fmt.Errorf("reading attendee by email: %w", err)
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	claims := []SlotClaim{}
+	ats := chain.TablePrefix(attendeesToSlotTable)
+	tsc := chain.TablePrefix(tableSlotClaims)
+	err = chain.New(s.conn).Select("*").From(tableSlotClaims).
+		Join(attendeesToSlotTable,
+			chain.CompareExpressions(chain.Eq, tsc("id"), ats("slot_claim_id"))).
+		AndWhere(ats("attendee_id = ?"), results[0].ID).
+		Fetch(&claims)
+	if err != nil {
+		return nil, fmt.Errorf("reading claims for attendee: %w", err)
+	}
+	newAttendee := results[0]
+	newAttendee.Claims = claims
+	return &newAttendee, nil
+}
+
+const eventSlotTable = "event_slot"
+
+// CreateEventSlot saves a slot in the database.
+func (s *SQLStorage) CreateEventSlot(e *EventSlot) (*EventSlot, error) {
+	results := []EventSlot{}
+	insertMap := map[string]interface{}{
+		"event_id":            e.Event.ID,
+		"name":                e.Name,
+		"description":         e.Description,
+		"cost":                e.Cost,
+		"capacity":            e.Capacity,
+		"start_date":          e.StartDate,
+		"end_date":            e.EndDate,
+		"purchaseable_from":   e.PurchaseableFrom,
+		"purchaseable_until":  e.PurchaseableUntil,
+		"available_to_public": e.AvailableToPublic,
+	}
+	if e.DependsOn != nil {
+		insertMap["depends_on_id"] = e.DependsOn.ID
+	}
+	if e.Event != nil {
+		insertMap["event_id"] = e.Event.ID
+	}
+	err := chain.New(s.conn).Insert(insertMap).
+		Table(eventSlotTable).Returning("*").
+		Fetch(&results)
+	if err != nil {
+		return nil, fmt.Errorf("creating new attendee: %w", err)
+	}
+	if len(results) == 0 {
+		return nil, fmt.Errorf("attendee was not created")
+	}
+	return &results[0], nil
+}
+
+type wrapEventSlot struct {
+	EventSlot
+	DependsOnID uint64 `gaum:"field_name:depends_on_id"`
+	EventID     uint64 `gaum:"field_name:event_id"`
+}
+
+// ReadEventSlotByID returns an event slot identified by the passed ID.
+func (s *SQLStorage) ReadEventSlotByID(id uint64) (*EventSlot, error) {
+	return s.readEventSlotByID(id, true)
+}
+
+func (s *SQLStorage) readEventSlotByID(id uint64, loadDeps bool) (*EventSlot, error) {
+	results := []wrapEventSlot{}
+	err := chain.New(s.conn).Select("*").
+		From(eventSlotTable).
+		AndWhere("id = ?", id).Fetch(&results)
+	if err != nil {
+		return nil, fmt.Errorf("reading event slots by id: %w", err)
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	slot := results[0].EventSlot
+	if results[0].DependsOnID != 0 && loadDeps {
+		slot.DependsOn, err = s.readEventSlotByID(results[0].DependsOnID, false)
+		if err != nil {
+			return nil, fmt.Errorf("loading dependency: %w", err)
+		}
+	}
+
+	events := []def.Event{}
+	err = chain.New(s.conn).Select("*").
+		From("event").
+		AndWhere("id = ?", results[0].EventID).Fetch(&events)
+	if err != nil {
+		return nil, fmt.Errorf("reading event by id: %w", err)
+	}
+	if len(events) == 0 {
+		return nil, fmt.Errorf("could not find event for slot")
+	}
+	slot.Event = &events[0]
+	return &slot, nil
+}
+
+// UpdateEventSlot updates event slot fields from the passed instance
+func (s *SQLStorage) UpdateEventSlot(e *EventSlot) error {
+	updateMap := map[string]interface{}{
+		"event_id":            e.Event.ID,
+		"name":                e.Name,
+		"description":         e.Description,
+		"cost":                e.Cost,
+		"capacity":            e.Capacity,
+		"start_date":          e.StartDate,
+		"end_date":            e.EndDate,
+		"purchaseable_from":   e.PurchaseableFrom,
+		"purchaseable_until":  e.PurchaseableUntil,
+		"available_to_public": e.AvailableToPublic,
+	}
+	if e.DependsOn != nil {
+		updateMap["depends_on_id"] = e.DependsOn.ID
+	}
+	if e.Event != nil {
+		updateMap["event_id"] = e.Event.ID
+	}
+	affected, err := chain.New(s.conn).UpdateMap(updateMap).
+		Table(eventSlotTable).AndWhere("id = ?", e.ID).
+		ExecResult()
+	if err != nil {
+		return fmt.Errorf("creating new attendee: %w", err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("attendee was not updated")
+	}
+	return nil
+}
+
 // CreateSlotClaim saves a slot claim and returns it with the populated ID
 func (s *SQLStorage) CreateSlotClaim(slotClaim *SlotClaim) (*SlotClaim, error) {
 	var err error
@@ -114,8 +315,7 @@ const (
 
 // UpdateAttendee saves the passed attendee attributes on top of the existing one.
 func (s *SQLStorage) UpdateAttendee(attendee *Attendee) (*Attendee, error) {
-	q := chain.New(s.conn)
-	rows, err := q.UpdateMap(map[string]interface{}{
+	rows, err := chain.New(s.conn).UpdateMap(map[string]interface{}{
 		"email":        attendee.Email,
 		"coc_accepted": attendee.CoCAccepted,
 	}).Table(tableAttendee).
@@ -129,7 +329,7 @@ func (s *SQLStorage) UpdateAttendee(attendee *Attendee) (*Attendee, error) {
 
 	for i := range attendee.Claims {
 		c := attendee.Claims[i]
-		err := q.Insert(map[string]interface{}{
+		err := chain.New(s.conn).Insert(map[string]interface{}{
 			"attendee_id":   attendee.ID,
 			"slot_claim_id": c.Redeemed,
 		}).Table(tableAttendeeSlotClaims).
@@ -142,7 +342,6 @@ func (s *SQLStorage) UpdateAttendee(attendee *Attendee) (*Attendee, error) {
 		if err != nil {
 			return nil, fmt.Errorf("updating attendee claims: %w", err)
 		}
-
 	}
 	return attendee, nil
 }
