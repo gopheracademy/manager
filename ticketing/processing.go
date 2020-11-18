@@ -21,6 +21,13 @@ type PurchaseStore interface {
 
 	UpdateClaimPayment(*ClaimPayment) (*ClaimPayment, error)
 	ChangeSlotClaimOwner([]SlotClaim, *Attendee, *Attendee) (*Attendee, *Attendee, error)
+
+	CreateAttendee(a *Attendee) (*Attendee, error)
+	ReadAttendeeByEmail(email string) (*Attendee, error)
+	ReadAttendeeByID(id uint64) (*Attendee, error)
+	CreateEventSlot(e *EventSlot) (*EventSlot, error)
+	ReadEventSlotByID(id uint64) (*EventSlot, error)
+	UpdateEventSlot(e *EventSlot) error
 }
 
 // ClaimSlots claims N slots for an attendee.
