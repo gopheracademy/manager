@@ -1,49 +1,41 @@
 <script>
   import Counter from "$components/Counter.svelte";
+  import { onMount } from "svelte";
+  let homepage = {};
+  let error = null;
+
+  onMount(async () => {
+    const parseJSON = (resp) => (resp.json ? resp.json() : resp);
+    const checkStatus = (resp) => {
+      if (resp.status >= 200 && resp.status < 300) {
+        return resp;
+      }
+      return parseJSON(resp).then((resp) => {
+        throw resp;
+      });
+    };
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const res = await fetch("http://localhost:1337/home", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then(checkStatus)
+        .then(parseJSON);
+      homepage = res;
+      console.log(homepage);
+    } catch (e) {
+      error = e;
+    }
+  });
 </script>
 
 <style>
-  :root {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  }
-
-  main {
-    text-align: center;
-    padding: 1em;
-    margin: 0 auto;
-  }
-
-  h1 {
-    color: #ff3e00;
-    text-transform: uppercase;
-    font-size: 4rem;
-    font-weight: 100;
-    line-height: 1.1;
-    margin: 4rem auto;
-    max-width: 14rem;
-  }
-
-  p {
-    max-width: 14rem;
-    margin: 2rem auto;
-    line-height: 1.35;
-  }
-
-  @media (min-width: 480px) {
-    h1 {
-      max-width: none;
-    }
-
-    p {
-      max-width: none;
-    }
-  }
 </style>
 
-<main>
-  <h1>GopherCon!</h1>
-
-  <Counter />
-  <p>We're the best conference.</p>
-</main>
+{#if error !== null}{error}{:else}{homepage.title}{/if}
