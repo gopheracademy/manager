@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: strapi
+spec:
+  type: ClusterIP
+  selector:
+    app: strapi
+  ports:
+  - name: strapi-port
+    protocol: TCP
+    port: 1337
+    targetPort: strapi-port

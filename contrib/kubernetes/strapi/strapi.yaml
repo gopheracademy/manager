@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strapi
+  labels:
+    name: strapi 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: strapi
+  template:
+    metadata:
+      labels:
+        app: strapi
+    spec:
+      containers:
+        - name: strapi
+          image: bketelsen/strapi:0
+          imagePullPolicy: Always
+          env:
+            - name: DATABASE_NAME
+              value: "strapi"
+            - name: DATABASE_HOST
+              value: "gcpostgres-postgresql"
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USERNAME
+              value: "postgres"
+            - name: DATABASE_PASSWORD
+              value: "nope"
+          ports:
+            - name: strapi-port
+              containerPort: 1337
+              protocol: TCP
