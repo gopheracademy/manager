@@ -7,18 +7,18 @@ type EventSlot struct {
 	Name        string
 	Description string
 	Cost        int64
-	Capacity    int // int should be enough even if we organize glastonbury
-	StartDate   uint64
-	EndDate     uint64
+	Capacity    int    // int should be enough even if we organize glastonbury
+	StartDate   uint64 // StartDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
+	EndDate     uint64 // EndDate is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// DependsOn means that these two Slots need to be acquired together, user must either buy
 	// both Slots or pre-own one of the one it depends on.
 	DependsOn *EventSlot
 	// PurchaseableFrom indicates when this item is on sale, for instance early bird tickets are the first
 	// ones to go on sale.
-	PurchaseableFrom uint64
+	PurchaseableFrom uint64 // PurchaseableFrom is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// PuchaseableUntil indicates when this item stops being on sale, for instance early bird tickets can
 	// no loger be purchased N months before event.
-	PurchaseableUntil uint64
+	PurchaseableUntil uint64 // PurchaseableUntil is Unix timestamp, seconds since Epoch (1/1/1970 UTC)
 	// AvailableToPublic indicates is this is something that will appear on the tickets purchase page (ie, we can
 	// issue sponsor tickets and those cannot be bought individually)
 	AvailableToPublic bool
@@ -63,7 +63,7 @@ type SlotClaim struct {
 
 // Attendee is a person attending one or more Slots of the Conference.
 type Attendee struct {
-	ID    uint
+	ID    uint64
 	Email string
 	// CoCAccepted, claims cannot be used without this.
 	CoCAccepted bool
@@ -74,8 +74,9 @@ type Attendee struct {
 
 // PaymentMethodMoney represents a payment in cash.
 type PaymentMethodMoney struct {
+	ID         uint64
 	PaymentRef string // stripe payment ID/Log?
-	Amount     int64
+	Amount     int64  // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument
@@ -92,9 +93,10 @@ var _ FinancialInstrument = &PaymentMethodMoney{}
 
 // PaymentMethodConferenceDiscount represents a discount issued by the event.
 type PaymentMethodConferenceDiscount struct {
+	ID uint64
 	// Detail describes what kind of discount was issued (ie 100% sponsor, 30% grant)
 	Detail string
-	Amount int64
+	Amount int64 // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument
@@ -111,8 +113,9 @@ var _ FinancialInstrument = &PaymentMethodConferenceDiscount{}
 
 // PaymentMethodCreditNote represents credit extended to defer payment.
 type PaymentMethodCreditNote struct {
+	ID     uint64
 	Detail string
-	Amount int64
+	Amount int64 // Money is handled in ints to ease use of OTO, do not divide
 }
 
 // Total implements FinancialInstrument

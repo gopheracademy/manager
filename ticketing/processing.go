@@ -72,11 +72,22 @@ func PayClaims(store PurchaseStore,
 		ClaimsPayed: ptrClaims,
 		Payment:     payments,
 	}
-
-	claimPayment, err := store.CreateClaimPayment(claimPayment)
+	succed, fail, atomic, err := store.AtomicOperation()
 	if err != nil {
+		return nil, fmt.Errorf("beginning atomic operation: %w", err)
+	}
+
+	claimPayment, err = atomic.CreateClaimPayment(claimPayment)
+	if err != nil {
+		if atomicErr := fail(); atomicErr != nil {
+			err = fmt.Errorf("%w (also cancelling atomic operation: %v)", err, atomicErr)
+		}
 		return nil, fmt.Errorf("paying for claims: %w", err)
 	}
+	if err := succed(); err != nil {
+		return nil, fmt.Errorf("confirming atomic operation: %w", err)
+	}
+
 	return claimPayment, nil
 }
 
@@ -100,10 +111,23 @@ func CoverCredit(store PurchaseStore,
 		}
 		existingPayment.Payment = append(existingPayment.Payment, payments[i])
 	}
-	_, err := store.UpdateClaimPayment(existingPayment)
+	succed, fail, atomic, err := store.AtomicOperation()
 	if err != nil {
+		return fmt.Errorf("beginning atomic operation: %w", err)
+	}
+	_, err = atomic.UpdateClaimPayment(existingPayment)
+	if err != nil {
+		if atomicErr := fail(); atomicErr != nil {
+			err = fmt.Errorf("%w (also cancelling atomic operation: %v)", err, atomicErr)
+		}
+
 		return fmt.Errorf("saving new payments %w", err)
 	}
+
+	if err := succed(); err != nil {
+		return fmt.Errorf("confirming atomic operation: %w", err)
+	}
+
 	return nil
 }
 
@@ -120,8 +144,18 @@ func TransferClaims(storer PurchaseStore,
 			return nil, nil, fmt.Errorf("%d claim for slot %s does not belong to %s", claims[i].ID, claims[i].EventSlot.Name, source.Email)
 		}
 	}
-	if source, target, err = storer.ChangeSlotClaimOwner(claims, source, target); err != nil {
+	succed, fail, atomic, err := storer.AtomicOperation()
+	if err != nil {
+		return nil, nil, fmt.Errorf("beginning atomic operation: %w", err)
+	}
+	if source, target, err = atomic.ChangeSlotClaimOwner(claims, source, target); err != nil {
+		if atomicErr := fail(); atomicErr != nil {
+			err = fmt.Errorf("%w (also cancelling atomic operation: %v)", err, atomicErr)
+		}
 		return nil, nil, fmt.Errorf("reowning slot claim: %w", err)
+	}
+	if err := succed(); err != nil {
+		return nil, nil, fmt.Errorf("confirming atomic operation: %w", err)
 	}
 
 	return source, target, nil
