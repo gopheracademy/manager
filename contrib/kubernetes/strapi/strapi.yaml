@@ -16,19 +16,22 @@ spec:
     spec:
       containers:
         - name: strapi
-          image: bketelsen/strapi:0
+          image: bketelsen/content:10
           imagePullPolicy: Always
           env:
             - name: DATABASE_NAME
               value: "strapi"
             - name: DATABASE_HOST
-              value: "gcpostgres-postgresql"
+              value: "private-gophercon-do-user-167863-0.b.db.ondigitalocean.com"
             - name: DATABASE_PORT
-              value: "5432"
+              value: "25060"
             - name: DATABASE_USERNAME
-              value: "postgres"
+              value: "strapi"
             - name: DATABASE_PASSWORD
-              value: "nope"
+              valueFrom:
+                secretKeyRef:
+                  name: strapi-db-secret
+                  key: password
           ports:
             - name: strapi-port
               containerPort: 1337

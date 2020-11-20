@@ -11,6 +11,7 @@ require (
 	github.com/opentracing-contrib/go-grpc v0.0.0-20200813121455-4a6760c71486
 	github.com/opentracing-contrib/go-stdlib v0.0.0-20190519235532-cf7a6c988dc9
 	github.com/opentracing/opentracing-go v1.2.0
+	github.com/pacedotdev/oto v0.10.8 // indirect
 	github.com/pacedotdev/oto/otohttp v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1

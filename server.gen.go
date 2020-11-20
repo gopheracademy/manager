@@ -157,7 +157,7 @@ type Event struct {
 
 // Conference is a brand like GopherCon
 type Conference struct {
-	ID     uint32  `json:"id"`
+	ID     uint    `json:"id"`
 	Name   string  `json:"name"`
 	Events []Event `json:"events"`
 }

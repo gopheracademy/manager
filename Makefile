@@ -22,6 +22,10 @@ build/bindata/bindata.go: hashed-artifacts
 	go-bindata -modtime 1 -pkg bindata -prefix build/by-hash/ -o $@ build/by-hash/*
 
 
+# build the cms
+content: FORCE
+	@cd content && npm install && npm run build
+
 # build the website
 www: FORCE
 	@cd www && npm install && npm run build
@@ -36,7 +40,7 @@ GO            = GOPATH=$(CURDIR)/.gopath GOBIN=$(CURDIR)/build go
 GO_BUILDFLAGS =
 GO_LDFLAGS    = -s -w
 
-$(CMD):  generate www
+$(CMD):  deps generate www
 	$(GO) build $(GO_BUILDFLAGS) -ldflags '$(GO_LDFLAGS)' '$(PKG)'
 
 
@@ -55,4 +59,8 @@ vendor: FORCE
 # generate all the service files from the oto definitions in the def directory
 generate: FORCE
 	@./generate.sh
+.PHONY: FORCE
+
+deps: FORCE
+	@go install github.com/pacedotdev/oto
 .PHONY: FORCE
