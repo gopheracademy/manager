@@ -16,6 +16,7 @@ type ConferenceService interface {
 	Create(context.Context, CreateConferenceRequest) (*CreateConferenceResponse, error)
 	Delete(context.Context, DeleteConferenceRequest) (*DeleteConferenceResponse, error)
 	Get(context.Context, GetConferenceRequest) (*GetConferenceResponse, error)
+	GetBySlug(context.Context, GetConferenceBySlugRequest) (*GetConferenceResponse, error)
 	// Greet prepares a lovely greeting.
 	List(context.Context, ListConferenceRequest) (*ListConferenceResponse, error)
 }
@@ -40,6 +41,7 @@ func RegisterConferenceService(metricsFactory metrics.Factory, tracer opentracin
 	server.Register("ConferenceService", "Create", handler.handleCreate)
 	server.Register("ConferenceService", "Delete", handler.handleDelete)
 	server.Register("ConferenceService", "Get", handler.handleGet)
+	server.Register("ConferenceService", "GetBySlug", handler.handleGetBySlug)
 	server.Register("ConferenceService", "List", handler.handleList)
 }
 
@@ -90,6 +92,25 @@ func (s *conferenceServiceServer) handleGet(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	response, err := s.conferenceService.Get(r.Context(), request)
+	if err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	if err := otohttp.Encode(w, r, http.StatusOK, response); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+}
+
+func (s *conferenceServiceServer) handleGetBySlug(w http.ResponseWriter, r *http.Request) {
+	s.logger.For(r.Context()).Info("ConferenceService.GetBySlug")
+
+	var request GetConferenceBySlugRequest
+	if err := otohttp.Decode(r, &request); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	response, err := s.conferenceService.GetBySlug(r.Context(), request)
 	if err != nil {
 		s.server.OnErr(w, r, err)
 		return
@@ -157,8 +178,9 @@ type Event struct {
 
 // Conference is a brand like GopherCon
 type Conference struct {
-	ID     uint    `json:"id"`
+	ID     uint32  `json:"id"`
 	Name   string  `json:"name"`
+	Slug   string  `json:"slug"`
 	Events []Event `json:"events"`
 }
 
@@ -196,6 +218,12 @@ type GetConferenceResponse struct {
 	Conference Conference `json:"conference"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
 	Error string `json:"error,omitempty"`
+}
+
+// GetConferenceBySlugRequest is the request object for
+// ConferenceService.GetBySlug.
+type GetConferenceBySlugRequest struct {
+	Slug string `json:"slug"`
 }
 
 // ListConferenceRequest is the request object for ConferenceService.List.
