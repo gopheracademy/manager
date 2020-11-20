@@ -7,14 +7,8 @@
     <a class="brand" href="/">GopherCon</a>
     <div class="tabs">
       <a
-        class={segment == 'sponsors' ? 'active' : ''}
-        href="/sponsors">Sponsors</a>
-      <a class={segment == 'agenda' ? 'active' : ''} href="/agenda">Agenda</a>
-      <a
-        class={segment == 'speakers' ? 'active' : ''}
-        href="/speakers">Speakers</a>
-
-      <a class={segment == 'coc' ? 'active' : ''} href="/coc">Code of Conduct</a>
+        class={segment == '2021' ? 'active' : ''}
+        href="/gophercon/2021">Gophercon 2021</a>
     </div>
   </div>
   <div class="nav-right">

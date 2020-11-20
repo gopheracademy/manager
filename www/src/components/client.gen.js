@@ -65,6 +65,26 @@ export default class ConferenceService {
 		})
 	}
 	
+	async getBySlug(getConferenceBySlugRequest) {
+		const headers = {
+			'Accept':		'application/json',
+			'Accept-Encoding':	'gzip',
+			'Content-Type':		'application/json',
+		}
+		getConferenceBySlugRequest = getConferenceBySlugRequest || {}
+		const response = await fetch('/oto/ConferenceService.GetBySlug', {
+			method: 'POST',
+			headers: headers,
+			body: JSON.stringify(getConferenceBySlugRequest)
+		})
+		return response.json().then((json) => {
+			if (json.error) {
+				throw new Error(json.error)
+			}
+			return json
+		})
+	}
+	
 	async list(listConferenceRequest) {
 		const headers = {
 			'Accept':		'application/json',
