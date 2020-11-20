@@ -9,7 +9,9 @@
     "build": "strapi build",
     "strapi": "strapi"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "fs": "0.0.1-security"
+  },
   "dependencies": {
     "strapi": "3.3.3",
     "strapi-admin": "3.3.3",

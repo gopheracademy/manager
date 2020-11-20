@@ -1,3 +1,4 @@
+const fs = require('fs');
 module.exports = ({ env }) => ({
   defaultConnection: 'default',
   connections: {
@@ -10,7 +11,9 @@ module.exports = ({ env }) => ({
         database: env('DATABASE_NAME', 'strapi'),
         username: env('DATABASE_USERNAME', 'strapi'),
         password: env('DATABASE_PASSWORD', 'magical_password'),
-        ssl: env.bool('DATABASE_SSL', false),
+        ssl: {
+          ca: fs.readFileSync(`${__dirname}/ca-certificate.crt`).toString(),
+        }
       },
       options: {}
     },
