@@ -61,6 +61,11 @@ func (c conferenceService) GetBySlug(ctx context.Context, r GetConferenceBySlugR
 	resp := &GetConferenceResponse{
 		Conference: Conference{
 			Name: "Gophercon",
+			Events: []Event{{
+				Name: "GopherCon 2021",
+				Slug: "2021",
+			},
+			},
 		},
 	}
 	return resp, nil
