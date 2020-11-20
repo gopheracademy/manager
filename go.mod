@@ -3,14 +3,18 @@ module github.com/gopheracademy/manager
 go 1.15
 
 require (
+	github.com/ShiftLeftSecurity/gaum v1.0.10
 	github.com/gorilla/mux v1.8.0
+	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451
+	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/jaegertracing/jaeger v1.21.0
 	github.com/opentracing-contrib/go-grpc v0.0.0-20200813121455-4a6760c71486
 	github.com/opentracing-contrib/go-stdlib v0.0.0-20190519235532-cf7a6c988dc9
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pacedotdev/oto/otohttp v0.8.0
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
+	github.com/satori/go.uuid v1.2.0
 	github.com/shopspring/decimal v1.2.0
 	github.com/uber/jaeger-client-go v2.23.1+incompatible
 	github.com/uber/jaeger-lib v2.4.0+incompatible

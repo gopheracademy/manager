@@ -2,7 +2,8 @@ package def
 
 // Conference is a brand like GopherCon
 type Conference struct {
-	ID     uint32
+	// pk: "true"
+	ID     uint
 	Name   string
 	Events []Event
 }
