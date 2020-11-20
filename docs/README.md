@@ -25,6 +25,12 @@ Sponsor
 Show Runner will consist of two core components:
 
 * API
-* Administration website
+* Website
 
 Show Runner will expose information about Conference, Event, Sponsors, and more through a read-only public API which will be consumed by a public-facing marketing website.
+ 
+Additionally, Show Runner will consume content from an external Content Management System which will provide a WYSIWYG interface for non-technical people to edit content for the various pages of the customer facing website. 
+
+## Documentation 
+
+Start with [components]()
