@@ -50,7 +50,7 @@ $(CMD):  deps generate www
 # convenience target for developers: `make run` runs the application with
 # environment options sourced from $PWD/.env
 run:$(CMD)
-	set -euo pipefail && source ./.env && .$(CMD) $*
+	set -euo pipefail && .$(CMD) $*
 
 vendor: FORCE
 	$(GO) mod tidy
